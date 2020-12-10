@@ -5,11 +5,15 @@ def get_matrix_dimensions() -> tuple:
 
 def get_matrix_values(dim_x: int) -> list:
     # first get matrix with float values
-    f_matrix = [[float(n) for n in input().split()] for rows in range(dim_x)]
-    i_matrix = []
+    # f_matrix = [[float(n) for n in input().split()] for rows in range(dim_x)]
+    # i_matrix = []
     # see if float matrix has integer values, if so, convert to integers
-    for row in f_matrix:
-        i_matrix.append(list(map(lambda x: int(x) if x.is_integer() else x, row)))
+    # for row in f_matrix:
+    #    i_matrix.append(list(map(lambda x: int(x) if x.is_integer() else x, row)))
+    # list comprehension version:
+    # i_matrix = [[int(x) if x.is_integer() else x for x in row] for row in f_matrix]
+    # two-in-one version: - can't pass string representation of float into int(), therefore int(float(x))
+    i_matrix = [[int(float(x)) if float(x).is_integer() else float(x) for x in input().split()] for rows in range(dim_x)]
     return i_matrix
 
 
@@ -26,13 +30,42 @@ def scalar_matrix(scalar: int, dim_A: tuple, mat_A: list) -> list:
     return mat_S
 
 
-def transpose_matrix(dim_A: tuple, mat_A: list) -> list:
-    # my first solution using list comprehension
-    # mat_T = [[mat_A[y][x] for y in range(dim_A[0])] for x in range(dim_A[1])]
-    # second solution using list comprehension, zip and unpacking
+def transpose_main_diag(dim_A: tuple, mat_A: list) -> list:
+    '''
+    my first solution using list comprehension:
+    mat_T = [[mat_A[y][x] for y in range(dim_A[0])] for x in range(dim_A[1])]
+    another solution using map, list, zip and unpacking:
+    mat_T = list(map(list, zip(*mat_A)))
+    a solution using list comprehension, zip and unpacking:
+    '''
     mat_T = [list(n) for n in zip(*mat_A)]
-    # another solution using map, list, zip and unpacking
-    # mat_T = list(map(list, zip(*mat_A)))
+    return mat_T
+
+
+def transpose_side_diag(dim_A: tuple, mat_A: list) -> list:
+    '''
+    using own functions creatively:
+    mat_T = transpose_main_diag(dim_A, transpose_vertical(dim_A, transpose_horizontal(dim_A, mat_A)))
+    ----------------------------
+    reversing the method in main_diag, executed while slicing from the end instead of the beginning:
+    mat_T = reversed([list(n) for n in zip(*mat_A[::-1])])
+    ----------------------------
+    using list, map, zip, unpacking arguments and reversed, while slicing from the end:
+    '''
+    mat_T = reversed(list(map(list, zip(*mat_A[::-1]))))
+    return mat_T
+
+
+def transpose_horizontal(dim_A: tuple, mat_A: list) -> list:
+    mat_T = mat_A[::-1]
+    return mat_T
+
+
+def transpose_vertical(dim_A: tuple, mat_A: list) -> list:
+    # mat_T = [[mat_A[x][dim_A[1] - (y + 1)] for y in range(dim_A[1])] for x in range(dim_A[0])]
+    # or, much easier:
+    # mat_T = [[col for col in reversed(row)] for row in mat_A]
+    mat_T = [row[::-1] for row in mat_A]
     return mat_T
 
 
@@ -58,7 +91,7 @@ def multiply_matrices(dim_A: tuple, dim_B: tuple, mat_A: list, mat_B:list) -> li
                 add_row.append(result)
             mat_C.append(add_row)
         '''
-        # second solution using zip and list comprehension
+        # second solution using zip and some list comprehension
         for row_a in mat_A:
             add_row = []
             # zip(*mat_B) transposes B and returns iterable zip object, so turning cols into rows
@@ -72,7 +105,7 @@ def multiply_matrices(dim_A: tuple, dim_B: tuple, mat_A: list, mat_B:list) -> li
 
 
 # this is the list comprehension version of multiply matrix, based on for-loop solution above
-def multiply_matrices_compr(dim_A: tuple, dim_B: tuple, mat_A: list, mat_B:list) -> list:
+def multiply_matrices_compr(dim_A: tuple, dim_B: tuple, mat_A: list, mat_B: list) -> list:
     if dim_A[1] == dim_B[0]:  # check if amount of columns matrix A and amount of rows matrix B match
         '''
         Building up to single line list comprehension:
@@ -102,6 +135,25 @@ def multiply_matrices_compr(dim_A: tuple, dim_B: tuple, mat_A: list, mat_B:list)
     else:
         return ['The operation cannot be performed', ]
 
+def determinant(matrix: list) -> list or float:
+    size = len(matrix)
+    if size == 2:  # base case for determinant
+        a, b = matrix[0]
+        c, d = matrix[1]
+        det = (a * d) - (b * c)
+        return det
+    elif size == 1:  # if matrix has only 1 element, that element is the determinant
+        return print_matrix(matrix)
+    else:
+        subtotal = 0
+        # this solves the determinant using Laplace expansion along first column of (sub)matrix
+        for count, row in enumerate(matrix):
+            submatrix = [row[1:] for row in matrix]  # create submatrix where current column is deleted
+            del submatrix[count]  # also delete current row
+            # recursive function call
+            subtotal += row[0] * ((-1) ** count) * determinant(submatrix)
+        return subtotal
+
 
 def create_matrix(dim_A: tuple) -> list:
     rows = dim_A[0]
@@ -115,11 +167,33 @@ def create_matrix(dim_A: tuple) -> list:
 
 
 def choice_transpose():
-    print('Enter size of matrix:')
-    dim_A = get_matrix_dimensions()
-    print('Enter matrix:')
-    mat_A = get_matrix_values(dim_A[0])
-    print(print_matrix(transpose_matrix(dim_A, mat_A)))
+    while True:
+        print('1. Main diagonal\n2. Side diagonal\n3. Vertical line\n4. Horizontal line\n5. Back')
+        t_choice = int(input('Your choice:'))
+        if t_choice == 5:
+            break
+        elif t_choice not in (1, 2, 3, 4):
+            print('Invalid choice.')
+            continue
+        print('Enter size of matrix:')
+        dim_A = (5, 5)
+        dim_A = get_matrix_dimensions()
+        print('Enter matrix:')
+        mat_A = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12, 13, 14, 15], [16, 17, 18, 19, 20], [21, 22, 23, 24, 25]]
+        mat_A = get_matrix_values(dim_A[0])
+        print('The result is:')
+        if t_choice == 1:
+            print(print_matrix(transpose_main_diag(dim_A, mat_A)))
+            break
+        elif t_choice == 2:
+            print(print_matrix(transpose_side_diag(dim_A, mat_A)))
+            break
+        elif t_choice == 3:
+            print(print_matrix(transpose_vertical(dim_A, mat_A)))
+            break
+        elif t_choice == 4:
+            print(print_matrix(transpose_horizontal(dim_A, mat_A)))
+            break
 
 
 def choice_sum():
@@ -160,23 +234,40 @@ def choice_multiply():
     print(print_matrix(multiply_matrices_compr(dim_A, dim_B, mat_A, mat_B)))
 
 
-def main_menu():
-        print('1. Add matrices\n2. Multiply matrix by a constant\n3. Multiply matrices\n4. Transpose matrix\n0. Exit')
+def choice_determinant():
+    print('Enter size of matrix:',)
+    dim_A = (3, 3)
+    dim_A = get_matrix_dimensions()
+    print('Enter matrix:',)
+    mat_A = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    mat_A = get_matrix_values(dim_A[0])
+    print(determinant(mat_A),)
+
+
+def main_menu() -> bool:
+        print('1. Add matrices\n2. Multiply matrix by a constant\n3. Multiply matrices\n4. Transpose matrix\n'
+              '5. Calculate a determinant\n0. Exit')
         choice = int(input('Your choice:'))
         if choice == 1:
             choice_sum()
             return True
-        if choice == 2:
+        elif choice == 2:
             choice_scalar()
             return True
-        if choice == 3:
+        elif choice == 3:
             choice_multiply()
             return True
-        if choice == 4:
+        elif choice == 4:
             choice_transpose()
             return True
-        if choice == 0:
+        elif choice == 5:
+            choice_determinant()
+            return True
+        elif choice == 0:
             return False
+        else:
+            print('Invalid choice.')
+            return True
 
 
 if __name__ == '__main__':
